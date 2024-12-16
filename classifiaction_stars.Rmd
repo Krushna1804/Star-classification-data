@@ -1,0 +1,219 @@
+---
+title: "classification_stars"
+author: "pravin shinde"
+date: '2024-12-11'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load required libraries
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(e1071)
+library(randomForest)
+library(pROC)
+library(MASS)
+
+# Load the dataset 
+stars_data <- read.csv("C:/Users/pravi/Downloads/Stars.csv")
+View(stars_data)
+# EDA
+# Summary statistics
+summary(stars_data)
+
+# Check for missing values
+colSums(is.na(stars_data))
+
+# Structure of the dataset
+str(stars_data)
+
+
+
+
+
+# Visualizations
+# Temperature vs Luminosity
+ggplot(stars_data, aes(x = Temperature, y = L, color = Type)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Temperature vs Luminosity", x = "Temperature (K)", y = "Luminosity (L/Lo)")
+
+ggplot(stars_data, aes(x = R, y = A_M, color = Type)) +
+  geom_point(size = 3, alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Radius vs Absolute Magnitude by Star Type",
+    x = "Radius (R/Ro)",
+    y = "Absolute Magnitude (Mv)",
+    color = "Star Type"
+  )
+#intepretation 
+#Most stars appear to have a small radius (close to zero) and a negative absolute #magnitude, indicating they are dimmer and smaller in size.
+#There is a large cluster of stars with a radius close to 0 and absolute magnitude #values ranging from -10 to 0.
+#Star types 0, 1, and 2 are clustered in the lower regions of the plot (on the left #and near the bottom), with radii and absolute magnitudes that are lower.
+#Star types 3, 4, and 5 are scattered more toward the higher end of the radius axis #and are less dense, indicating they have larger radii and brighter magnitudes.
+# 2. Radius vs Absolute Magnitude by Star Type
+# Objective: To explore the relationship between radius and absolute magnitude and #how they vary across star types.
+# 3. Star Count by Spectral Class
+# Objective: To analyze the distribution of stars among spectral classes.
+ggplot(stars_data, aes(Spectral_Class, fill = Type)) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  labs(
+    title = "Star Count by Spectral Class",
+    x = "Spectral Class",
+    y = "Count",
+    fill = "Star Type"
+  )
+
+
+# preprocessing
+
+# Convert target variable 'Type' to a factor
+stars_data$Type <- as.factor(stars_data$Type)
+
+# Encode multicategorical variables
+stars_data$Color <- as.numeric(as.factor(stars_data$Color))
+stars_data$Spectral_Class <- as.numeric(as.factor(stars_data$Spectral_Class))
+
+# Split dataset into training (70%) and testing (30%) sets
+set.seed(42)
+trainIndex <- createDataPartition(stars_data$Type, p = 0.7, list = FALSE)
+trainData <- stars_data[trainIndex, ]
+View(trainData)
+testData <- stars_data[-trainIndex, ]
+View(test_data)
+
+# Preprocessing: Center, scale, and handle near-zero variance
+preprocess_steps <- preProcess(trainData[, -ncol(trainData)], method = c("center", "scale", "nzv"))
+trainData <- predict(preprocess_steps, trainData)
+testData <- predict(preprocess_steps, testData)
+
+
+
+# Set up cross-validation control
+ctrl <- trainControl(method = "cv", number = 10, classProbs = TRUE)
+# Apply LDA using caret
+lda_model <- train(Type ~ ., data = trainData, method = "lda", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+lda_predictions <- predict(lda_model, testData)
+
+# Evaluate performance
+lda_conf_matrix <- confusionMatrix(lda_predictions, testData$Type)
+print(lda_conf_matrix)
+# Apply QDA using caret
+qda_model <- train(Type ~ ., data = trainData, method = "qda", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+qda_predictions <- predict(qda_model, testData)
+
+# Evaluate performance
+qda_conf_matrix <- confusionMatrix(qda_predictions, testData$Type)
+print(qda_conf_matrix)
+# Apply Naive Bayes using caret
+nb_model <- train(Type ~ ., data = trainData, method = "nb", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+nb_predictions <- predict(nb_model, testData)
+
+# Evaluate performance
+nb_conf_matrix <- confusionMatrix(nb_predictions, testData$Type)
+print(nb_conf_matrix)
+# Apply k-NN using caret
+knn_model <- train(Type ~ ., data = trainData, method = "knn", tuneLength = 10, trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+knn_predictions <- predict(knn_model, testData)
+
+# Evaluate performance
+knn_conf_matrix <- confusionMatrix(knn_predictions, testData$Type)
+print(knn_conf_matrix)
+
+# Apply Decision Tree using caret
+dt_model <- train(Type ~ ., data = trainData, method = "rpart", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+dt_predictions <- predict(dt_model, testData)
+
+# Evaluate performance
+dt_conf_matrix <- confusionMatrix(dt_predictions, testData$Type)
+print(dt_conf_matrix)
+# Apply Random Forest using caret
+rf_model <- train(Type ~ ., data = trainData, method = "rf", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+rf_predictions <- predict(rf_model, testData)
+
+# Evaluate performance
+rf_conf_matrix <- confusionMatrix(rf_predictions, testData$Type)
+print(rf_conf_matrix)
+# Apply Boosting using caret
+gbm_model <- train(Type ~ ., data = trainData, method = "gbm", verbose = FALSE, trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+gbm_predictions <- predict(gbm_model, testData)
+
+# Evaluate performance
+gbm_conf_matrix <- confusionMatrix(gbm_predictions, testData$Type)
+print(gbm_conf_matrix)
+# Apply SVC using caret
+svm_model <- train(Type ~ ., data = trainData, method = "svmLinear", trControl = trainControl(method = "cv", number = 5))
+
+# Make predictions
+svm_predictions <- predict(svm_model, testData)
+
+# Evaluate performance
+svm_conf_matrix <- confusionMatrix(svm_predictions, testData$Type)
+print(svm_conf_matrix)
+# Collect Accuracy from models
+model_results <- data.frame(
+  Model = c("LDA", "Naive Bayes", "k-NN", "Decision Tree", "Random Forest", "Boosting", "SVC"),
+  Accuracy = c(
+    lda_conf_matrix$overall["Accuracy"],
+    nb_conf_matrix$overall["Accuracy"],
+    knn_conf_matrix$overall["Accuracy"],
+    dt_conf_matrix$overall["Accuracy"],
+    rf_conf_matrix$overall["Accuracy"],
+    gbm_conf_matrix$overall["Accuracy"],
+    svm_conf_matrix$overall["Accuracy"]
+  )
+)
+View(model_results)
+# Barplot of Accuracy
+library(ggplot2)
+ggplot(model_results, aes(x = Model, y = Accuracy)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  theme_minimal() +
+  labs(title = "Model Accuracy Comparison", x = "Model", y = "Accuracy")
+
+
+
+
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
